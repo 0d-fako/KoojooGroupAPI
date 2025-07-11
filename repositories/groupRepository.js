@@ -26,6 +26,14 @@ class GroupRepository {
     }
   }
 
+  async findAll(){
+    try {
+      return await Group.find().sort({ createdAt: -1 });
+    } catch (error) {
+      throw error;
+    } 
+  }
+
   async findByTreasurerId(treasurerId) {
     try {
       return await Group.find({ treasurerId }).sort({ createdAt: -1 });
@@ -33,6 +41,8 @@ class GroupRepository {
       throw error;
     }
   }
+
+
 
   async update(groupId, updateData) {
     try {

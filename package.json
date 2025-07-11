@@ -16,5 +16,13 @@
     "url": "https://github.com/0d-fako/KoojooGroupAPI/issues"
   },
   "homepage": "https://github.com/0d-fako/KoojooGroupAPI#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "mongodb": "^6.17.0",
+    "mongoose": "^8.16.3",
+    "uuid": "^11.1.0"
+  }
 }

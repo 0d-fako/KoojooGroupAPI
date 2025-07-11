@@ -8,16 +8,16 @@ dotenv.config()
 app.use(cors())
 app.use(express.json())
 
-const groupRoutes = require('./src/routes/groupRoutes');
-app.use('/api/groups', groupRoutes);
+const groupRoutes = require('./routes/groupRoutes');
+app.use('/api/v1/groups', groupRoutes);
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/koojoo-groups')
+mongoose.connect(process.env.MONGO_URI )
 .then(() => {
     console.log("Connected to MongoDB");
     app.listen(PORT, () => {
-        console.log(`Create group: POST http://localhost:${PORT}/api/groups`);
+        console.log(`Create group: POST http://localhost:${PORT}/api/v1/groups`);
     });
 })
 .catch((err) => {

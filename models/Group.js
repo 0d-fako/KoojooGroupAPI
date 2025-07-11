@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { GROUP_STATUS, FREQUENCY_TYPE, getGroupStatusValues, getFrequencyTypeValues } = require('../enums');
+const { GROUP_STATUS, FREQUENCY_TYPE, getGroupStatusValues, getFrequencyTypeValues } = require('../enums/enums');
 
 const groupSchema = new mongoose.Schema({
   groupId: { 

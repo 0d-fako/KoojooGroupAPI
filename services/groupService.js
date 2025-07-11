@@ -1,30 +1,29 @@
-const groupRepository = require('../repositories/GroupRepository');
+const groupRepository = require('../repositories/groupRepository');
 const { v4: uuidv4 } = require('uuid');
-const { GROUP_STATUS } = require('../enums');
+const { GROUP_STATUS } = require('../enums/enums');
 
 class GroupService {
   async createGroup(groupData, treasurerId) {
     try {
-      // Validate business rules
+      
       this.validateGroupData(groupData);
 
-      // Prepare group data
       const group = {
         groupId: uuidv4(),
         ...groupData,
         treasurerId,
         status: GROUP_STATUS.PENDING_ACTIVATION,
-        currentMembers: 1, // Treasurer is first member
+        currentMembers: 1, 
         currentCycle: 1,
         currentTurn: 1,
         totalContributions: 0,
         totalPayouts: 0
       };
 
-      // Save to database
+     
       const createdGroup = await groupRepository.create(group);
 
-      // Return clean response
+    
       return this.formatGroupResponse(createdGroup);
 
     } catch (error) {
@@ -51,6 +50,17 @@ class GroupService {
     }
   }
 
+  async getAllGroups() {
+    try {
+      const groups = await groupRepository.findAll();
+      
+      return groups.map(group => this.formatGroupResponse(group));
+
+    } catch (error) {
+      throw error;
+    }         
+  }
+
   async getGroupsByTreasurer(treasurerId) {
     try {
       if (!treasurerId) {
@@ -68,7 +78,7 @@ class GroupService {
 
   async updateGroup(groupId, updateData) {
     try {
-      // Validate update data
+    
       this.validateUpdateData(updateData);
 
       const updatedGroup = await groupRepository.update(groupId, updateData);
@@ -84,7 +94,7 @@ class GroupService {
     }
   }
 
-  // Private helper methods
+  
   validateGroupData(groupData) {
     const { groupName, contributionAmount, contributionFrequency, requiredMembers, maxMembers } = groupData;
 
@@ -100,12 +110,12 @@ class GroupService {
       throw new Error('Contribution frequency is required');
     }
 
-    if (!requiredMembers || requiredMembers < 2 || requiredMembers > 50) {
-      throw new Error('Required members must be between 2 and 50');
+    if (!requiredMembers || requiredMembers < 2 || requiredMembers > 12) {
+      throw new Error('Required members must be between 2 and 12');
     }
 
-    if (!maxMembers || maxMembers < 2 || maxMembers > 50) {
-      throw new Error('Max members must be between 2 and 50');
+    if (!maxMembers || maxMembers < 2 || maxMembers > 12) {
+      throw new Error('Max members must be between 2 and 12');
     }
 
     if (maxMembers < requiredMembers) {
@@ -114,8 +124,8 @@ class GroupService {
   }
 
   validateUpdateData(updateData) {
-    // Add validation for update operations
-    const allowedFields = ['groupName', 'description', 'contributionAmount'];
+   
+    const allowedFields = [ 'description', 'contributionAmount'];
     const updateFields = Object.keys(updateData);
     
     const invalidFields = updateFields.filter(field => !allowedFields.includes(field));

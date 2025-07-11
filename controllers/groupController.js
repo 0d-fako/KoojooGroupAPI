@@ -64,6 +64,26 @@ class GroupController {
     }
   }
 
+  async getAllGroups(req, res) {
+    try {
+      const groups = await groupService.getAllGroups();
+
+      res.json({
+        success: true,
+        data: groups,
+        count: groups.length
+      });
+
+    } catch (error) {
+      console.error('Get all groups error:', error);
+      
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
   async getTreasurerGroups(req, res) {
     try {
       const { treasurerId } = req.params;
