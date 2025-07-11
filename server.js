@@ -8,7 +8,7 @@ dotenv.config()
 app.use(cors())
 app.use(express.json())
 
-const groupRoutes = require('./routes/groupRoutes');
+const groupRoutes = require('./groups/routes/groupRoutes');
 app.use('/api/v1/groups', groupRoutes);
 
 const PORT = process.env.PORT
