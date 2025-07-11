@@ -1,144 +1,95 @@
-import mongoose from 'mongoose';
-
-import { GROUP_STATUS } from  '../enums/enums.js';
+const mongoose = require('mongoose');
+const { GROUP_STATUS, FREQUENCY_TYPE, getGroupStatusValues, getFrequencyTypeValues } = require('../enums');
 
 const groupSchema = new mongoose.Schema({
-  groupId: {
-    type: String,
-    required: true,
+  groupId: { 
+    type: String, 
+    required: true, 
     unique: true,
-    default: () => `GRP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    index: true 
   },
-  groupName: {
+  groupName: { 
+    type: String, 
+    required: true,
+    maxlength: 100,
+    trim: true
+  },
+  description: { 
+    type: String,
+    maxlength: 500,
+    trim: true
+  },
+  treasurerId: { 
     type: String,
     required: true,
-    trim: true,
-    maxlength: 100
+    index: true 
   },
-  description: {
-    type: String,
-    maxlength: 500
+  status: { 
+    type: String, 
+    enum: getGroupStatusValues(), 
+    default: GROUP_STATUS.PENDING_ACTIVATION,
+    index: true 
   },
-  creatorId: {
-    type: String,
+  contributionAmount: { 
+    type: Number, 
     required: true,
-    ref: 'User'
+    min: [1000, 'Minimum contribution is 1000 NGN']
   },
-  virtualAccountNumber: {
-    type: String,
-    unique: true,
-    sparse: true
+  contributionFrequency: { 
+    type: String, 
+    enum: getFrequencyTypeValues(), 
+    required: true 
   },
-  virtualAccountName: {
-    type: String
-  },
-  bankCode: {
-    type: String
-  },
-  contributionAmount: {
-    type: Number,
+  requiredMembers: { 
+    type: Number, 
     required: true,
-    min: 1000, 
-    max: 10000000
+    min: [2, 'Minimum 2 members required'],
+    max: [50, 'Maximum 50 members allowed']
   },
-  contributionFrequency: {
-    type: String,
-    enum: ['daily', 'weekly', 'monthly', 'bi-weekly'],
-    default: 'monthly'
-  },
-  maxMembers: {
-    type: Number,
-    required: true,
-    min: 3,
-    max: 50
-  },
-  currentCycle: {
-    type: Number,
+  currentMembers: { 
+    type: Number, 
     default: 1
   },
-  totalCycles: {
-    type: Number,
+  maxMembers: { 
+    type: Number, 
     required: true,
-    min: 1
+    min: [2, 'Minimum 2 members allowed'],
+    max: [50, 'Maximum 50 members allowed']
   },
-  status: {
-    type: String,
-    enum: Object.values(GROUP_STATUS),
-    default: GROUP_STATUS.ACTIVE
+  currentCycle: { 
+    type: Number, 
+    default: 1
   },
-  groupRules: {
-    type: String,
-    maxlength: 1000
+  currentTurn: { 
+    type: Number, 
+    default: 1
   },
-  penaltyAmount: {
-    type: Number,
+  totalContributions: { 
+    type: Number, 
     default: 0
   },
-  latePenaltyDays: {
-    type: Number,
-    default: 3
-  },
-  nextPaymentDate: {
-    type: Date,
-    required: true
-  },
-  nextPayoutDate: {
-    type: Date,
-    required: true
-  },
-  settings: {
-    allowEarlyPayment: {
-      type: Boolean,
-      default: true
-    },
-    autoSelectRecipient: {
-      type: Boolean,
-      default: true
-    },
-    requirePaymentProof: {
-      type: Boolean,
-      default: false
-    },
-    enableNotifications: {
-      type: Boolean,
-      default: true
-    }
-  },
-  totalContributions: {
-    type: Number,
+  totalPayouts: { 
+    type: Number, 
     default: 0
   },
-  totalPayouts: {
-    type: Number,
-    default: 0
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  updatedAt: { 
+    type: Date, 
+    default: Date.now 
   }
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
 });
 
-// Virtual fields
-groupSchema.virtual('currentBalance').get(function() {
-  return this.totalContributions - this.totalPayouts;
+
+groupSchema.pre('save', function(next) {
+  if (this.maxMembers < this.requiredMembers) {
+    return next(new Error('Max members cannot be less than required members'));
+  }
+  
+  this.updatedAt = new Date();
+  next();
 });
 
-groupSchema.virtual('isActive').get(function() {
-  return this.status === GROUP_STATUS.ACTIVE;
-});
-
-// Indexes for performance
-groupSchema.index({ creatorId: 1 });
-groupSchema.index({ status: 1 });
-groupSchema.index({ virtualAccountNumber: 1 });
-groupSchema.index({ nextPaymentDate: 1 });
-
-export default mongoose.model('Group', groupSchema);
+module.exports = mongoose.model('Group', groupSchema)

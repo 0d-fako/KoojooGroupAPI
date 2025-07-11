@@ -1,20 +1,19 @@
 export const GROUP_STATUS = {
-  ACTIVE: 'active',
-  PAUSED: 'paused',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
+    PENDING_ACTIVATION: 'pending_activation',
+    ACTIVE: 'active',
+    PAUSED: 'paused',
+    COMPLETED: 'completed',
+    CLOSED: 'closed',
+    CANCELLED: 'cancelled'
 };
 
-export const PAYMENT_STATUS = {
-  PENDING: 'pending',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  OVERDUE: 'overdue'
+export const FREQUENCY_TYPE = {
+    DAILY: 'daily',
+    WEEKLY: 'weekly',
+    BI_WEEKLY: 'bi_weekly',
+    MONTHLY: 'monthly',
+    QUARTERLY: 'quarterly'
 };
 
-export const PAYOUT_STATUS = {
-  SCHEDULED: 'scheduled',
-  PROCESSING: 'processing',
-  COMPLETED: 'completed',
-  FAILED: 'failed'
-};
+export const getGroupStatusValues = () => Object.values(GROUP_STATUS);
+export const getFrequencyTypeValues = () => Object.values(FREQUENCY_TYPE);
