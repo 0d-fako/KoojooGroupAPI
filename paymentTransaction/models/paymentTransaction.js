@@ -70,7 +70,6 @@ const paymentTransactionSchema = new mongoose.Schema({
   }
 });
 
-// Indexes for efficient queries
 paymentTransactionSchema.index({ groupId: 1, cycle: 1, turn: 1 });
 paymentTransactionSchema.index({ userId: 1, status: 1 });
 paymentTransactionSchema.index({ dueDate: 1 });
