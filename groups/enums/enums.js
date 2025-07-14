@@ -1,4 +1,4 @@
-export const GROUP_STATUS = {
+const GROUP_STATUS = {
     PENDING_ACTIVATION: 'pending_activation',
     ACTIVE: 'active',
     PAUSED: 'paused',
@@ -7,7 +7,7 @@ export const GROUP_STATUS = {
     CANCELLED: 'cancelled'
 };
 
-export const FREQUENCY_TYPE = {
+const FREQUENCY_TYPE = {
     DAILY: 'daily',
     WEEKLY: 'weekly',
     BI_WEEKLY: 'bi_weekly',
@@ -15,5 +15,51 @@ export const FREQUENCY_TYPE = {
     QUARTERLY: 'quarterly'
 };
 
-export const getGroupStatusValues = () => Object.values(GROUP_STATUS);
-export const getFrequencyTypeValues = () => Object.values(FREQUENCY_TYPE);
+const MEMBER_ROLE = {
+    TREASURER: 'treasurer',
+    MEMBER: 'member',
+    ADMIN: 'admin'
+};
+
+const PAYMENT_STATUS = {
+    PENDING: 'pending',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+    REFUNDED: 'refunded'
+};
+
+const TRANSACTION_TYPE = {
+    CONTRIBUTION: 'contribution',
+    PAYOUT: 'payout',
+    PENALTY: 'penalty',
+    REFUND: 'refund'
+};
+
+const INVITE_STATUS = {
+    PENDING: 'pending',
+    USED: 'used',
+    EXPIRED: 'expired',
+    CANCELLED: 'cancelled'
+};
+
+const getGroupStatusValues = () => Object.values(GROUP_STATUS);
+const getFrequencyTypeValues = () => Object.values(FREQUENCY_TYPE);
+const getMemberRoleValues = () => Object.values(MEMBER_ROLE);
+const getPaymentStatusValues = () => Object.values(PAYMENT_STATUS);
+const getTransactionTypeValues = () => Object.values(TRANSACTION_TYPE);
+const getInviteStatusValues = () => Object.values(INVITE_STATUS);
+
+module.exports = {
+    GROUP_STATUS,
+    FREQUENCY_TYPE,
+    MEMBER_ROLE,
+    PAYMENT_STATUS,
+    TRANSACTION_TYPE,
+    INVITE_STATUS,
+    getGroupStatusValues,
+    getFrequencyTypeValues,
+    getMemberRoleValues,
+    getPaymentStatusValues,
+    getTransactionTypeValues,
+    getInviteStatusValues
+};
