@@ -15,11 +15,13 @@ app.post('/debug', (req, res) => {
 
 const groupRoutes = require('./groups/routes/groupRoutes');
 const membershipRoutes = require('./memberships/routes/membershipRoutes');
-const accountRoutes = require('./accounts/routes/accountRoutes'); // ← Fixed: added 's'
+const accountRoutes = require('./accounts/routes/accountRoutes'); 
+const inviteRoutes = require('./inviteLink/routes/inviteRoutes');
 
 app.use('/api/v1/memberships', membershipRoutes);
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/accounts', accountRoutes);
+app.use('/api/v1/invites', inviteRoutes);
 
 const PORT = process.env.PORT
 
@@ -30,6 +32,7 @@ mongoose.connect(process.env.MONGO_URI )
         console.log(`Create group: POST http://localhost:${PORT}/api/v1/groups`);
         console.log(`Create membership: POST http://localhost:${PORT}/api/v1/memberships`);
         console.log(`Create account: POST http://localhost:${PORT}/api/v1/accounts`);
+        console.log(`Create invite: POST http://localhost:${PORT}/api/v1/invites`);
     });
 })
 .catch((err) => {

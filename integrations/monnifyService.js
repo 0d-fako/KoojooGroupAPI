@@ -1,21 +1,14 @@
-// integrations/monnifyService.js (Correct Implementation)
 const axios = require('axios');
 
 class MonnifyService {
   constructor() {
-    this.baseURL = process.env.MONNIFY_BASE_URL || 'https://sandbox-api.monnify.com';
+    this.baseURL = process.env.MONNIFY_BASE_URL;
     this.apiKey = process.env.MONNIFY_API_KEY;
     this.secretKey = process.env.MONNIFY_SECRET_KEY;
     this.contractCode = process.env.MONNIFY_CONTRACT_CODE;
     this.accessToken = null;
     this.tokenExpiry = null;
 
-    console.log('=== Monnify Service Configuration ===');
-    console.log('Base URL:', this.baseURL);
-    console.log('API Key:', this.apiKey ? `${this.apiKey.substring(0, 15)}...` : '❌ NOT SET');
-    console.log('Secret Key:', this.secretKey ? `${this.secretKey.substring(0, 15)}...` : '❌ NOT SET');
-    console.log('Contract Code:', this.contractCode || '❌ NOT SET');
-    console.log('=====================================');
   }
 
   async getAccessToken() {
@@ -35,9 +28,6 @@ class MonnifyService {
       const credentials = Buffer.from(`${this.apiKey}:${this.secretKey}`).toString('base64');
       const loginUrl = `${this.baseURL}/api/v1/auth/login`;
 
-      console.log('🔐 Attempting Monnify authentication...');
-      console.log('🌐 Login URL:', loginUrl);
-
       const response = await axios.post(loginUrl, {}, {
         headers: {
           'Authorization': `Basic ${credentials}`,
@@ -47,30 +37,22 @@ class MonnifyService {
         timeout: 15000
       });
 
-      console.log('📊 Login Response Status:', response.status);
-      console.log('📊 Login Response:', JSON.stringify(response.data, null, 2));
-
       // Check if login was successful
       if (response.data && response.data.requestSuccessful === true) {
         this.accessToken = response.data.responseBody.accessToken;
         
-        // Set token expiry (Monnify tokens typically last 1 hour)
-        const expiresIn = response.data.responseBody.expiresIn || 3600; // Default 1 hour
+        // Set token expiry
+        const expiresIn = response.data.responseBody.expiresIn
         this.tokenExpiry = new Date(Date.now() + (expiresIn * 1000));
-
-        console.log('✅ Authentication successful!');
-        console.log('🎯 Access Token:', this.accessToken.substring(0, 30) + '...');
-        console.log('⏰ Token expires at:', this.tokenExpiry.toISOString());
 
         return this.accessToken;
       } else {
         const errorMessage = response.data?.responseMessage || 'Authentication failed';
-        console.log('❌ Authentication failed:', errorMessage);
         throw new Error(`Monnify authentication failed: ${errorMessage}`);
       }
 
     } catch (error) {
-      console.error('💥 Authentication error details:', {
+      console.error('Authentication error details:', {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
@@ -135,24 +117,19 @@ class MonnifyService {
         throw new Error('❌ Contract Code is required. Please set MONNIFY_CONTRACT_CODE in your .env file');
       }
 
-      console.log('📝 Account creation payload:', JSON.stringify(payload, null, 2));
-
+      
       // Make API call to create reserved account
       const createUrl = `${this.baseURL}/api/v2/bank-transfer/reserved-accounts`;
-      console.log('🌐 Account creation URL:', createUrl);
-
+      
       const response = await axios.post(createUrl, payload, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        timeout: 25000 // Increased timeout for account creation
+        timeout: 25000 
       });
-
-      console.log('📊 Account creation response status:', response.status);
-      console.log('📊 Account creation response:', JSON.stringify(response.data, null, 2));
-
+      
       // Check if account creation was successful
       if (response.data && response.data.requestSuccessful === true) {
         console.log('✅ Reserved account created successfully!');
@@ -352,27 +329,7 @@ class MonnifyService {
     }
   }
 
-  // Test banks endpoint
-  async testBanks() {
-    try {
-      console.log('🧪 Testing banks endpoint...');
-      const banks = await this.getBanks();
-      
-      return {
-        success: true,
-        message: '✅ Banks endpoint working!',
-        data: {
-          bankCount: banks ? banks.length : 0,
-          sampleBanks: banks ? banks.slice(0, 3).map(b => ({ name: b.bankName, code: b.bankCode })) : []
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `❌ Banks test failed: ${error.message}`
-      };
-    }
-  }
+
 }
 
 module.exports = new MonnifyService();
