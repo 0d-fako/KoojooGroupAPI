@@ -9,6 +9,9 @@ app.use(cors())
 app.use(express.json())
 
 const groupRoutes = require('./groups/routes/groupRoutes');
+const membershipRoutes = require('./memberships/routes/membershipRoutes');
+
+app.use('/api/v1/memberships', membershipRoutes);
 app.use('/api/v1/groups', groupRoutes);
 
 const PORT = process.env.PORT
@@ -18,6 +21,7 @@ mongoose.connect(process.env.MONGO_URI )
     console.log("Connected to MongoDB");
     app.listen(PORT, () => {
         console.log(`Create group: POST http://localhost:${PORT}/api/v1/groups`);
+        console.log(`Create membership: POST http://localhost:${PORT}/api/v1/memberships`);
     });
 })
 .catch((err) => {
