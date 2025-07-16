@@ -1,3 +1,4 @@
+// memberships/services/membershipService.js
 const membershipRepository = require('../repositories/membershipRepository');
 const { v4: uuidv4 } = require('uuid');
 const { MEMBER_ROLE } = require('../../groups/enums/enums');
@@ -16,16 +17,17 @@ class MembershipService {
         throw new Error('User is already a member of this group');
       }
 
+      // Calculate trust score for new member
+      const trustScore = this.calculateInitialTrustScore(membershipData);
 
-      if (!membershipData.payoutPosition) {
-        membershipData.payoutPosition = await membershipRepository.getNextPayoutPosition(
-          membershipData.groupId
-        );
-      }
+      // Get next payout position
+      const payoutPosition = await membershipRepository.getNextPayoutPosition(membershipData.groupId);
 
       const membership = {
         membershipId: uuidv4(),
         ...membershipData,
+        payoutPosition,
+        memberTrustScore: trustScore,
         joinedAt: new Date()
       };
 
@@ -37,14 +39,86 @@ class MembershipService {
     }
   }
 
-  async getMembershipByMembershipId(membershipId) {
+  calculateInitialTrustScore(membershipData) {
+    let trustScore = 70; // Base score for everyone
+
+    // Verification bonuses (same for all roles)
+    if (membershipData.hasPhoneVerification) trustScore += 5;
+    if (membershipData.hasEmailVerification) trustScore += 5;
+    if (membershipData.hasBvnVerification) trustScore += 10;
+    if (membershipData.hasNinVerification) trustScore += 10;
+
+    // Cap at 100
+    return Math.min(100, trustScore);
+  }
+
+  async updateTrustScore(membershipId, paymentBehavior) {
     try {
-      if (!membershipId) {
-        throw new Error('Membership ID is required');
+      const membership = await membershipRepository.findByMembershipId(membershipId);
+      if (!membership) {
+        throw new Error('Membership not found');
       }
 
+      const currentScore = membership.memberTrustScore;
+      let newScore = currentScore;
+
+      // Adjust based on payment behavior
+      if (paymentBehavior === 'on_time') {
+        newScore += 2; // Small reward for on-time payment
+      } else if (paymentBehavior === 'late') {
+        newScore -= 3; // Penalty for late payment
+      } else if (paymentBehavior === 'missed') {
+        newScore -= 5; // Larger penalty for missed payment
+      }
+
+      // Keep score between 0 and 100
+      newScore = Math.max(0, Math.min(100, newScore));
+
+      await membershipRepository.update(membershipId, {
+        memberTrustScore: newScore
+      });
+
+      console.log(`Trust score updated: ${currentScore} → ${newScore} (${paymentBehavior})`);
+      return newScore;
+
+    } catch (error) {
+      throw new Error(`Failed to update trust score: ${error.message}`);
+    }
+  }
+
+  async updateMemberStats(membershipId, statsUpdate) {
+    try {
+      this.validateStatsUpdate(statsUpdate);
+
+      const updatedMembership = await membershipRepository.update(membershipId, statsUpdate);
+      if (!updatedMembership) {
+        throw new Error('Membership not found');
+      }
+
+      return this.formatMembershipResponse(updatedMembership);
+
+    } catch (error) {
+      throw new Error(`Failed to update member stats: ${error.message}`);
+    }
+  }
+
+  async getMembershipByMembershipId(membershipId) {
+    try {
       const membership = await membershipRepository.findByMembershipId(membershipId);
-      
+      if (!membership) {
+        throw new Error('Membership not found');
+      }
+
+      return this.formatMembershipResponse(membership);
+
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getMembershipByUserAndGroup(userId, groupId) {
+    try {
+      const membership = await membershipRepository.findByUserAndGroup(userId, groupId);
       if (!membership) {
         throw new Error('Membership not found');
       }
@@ -58,10 +132,6 @@ class MembershipService {
 
   async getGroupMemberships(groupId, includeInactive = false) {
     try {
-      if (!groupId) {
-        throw new Error('Group ID is required');
-      }
-
       const memberships = await membershipRepository.findByGroupId(groupId, includeInactive);
       return memberships.map(membership => this.formatMembershipResponse(membership));
 
@@ -72,10 +142,6 @@ class MembershipService {
 
   async getUserMemberships(userId) {
     try {
-      if (!userId) {
-        throw new Error('User ID is required');
-      }
-
       const memberships = await membershipRepository.findByUserId(userId);
       return memberships.map(membership => this.formatMembershipResponse(membership));
 
@@ -84,73 +150,8 @@ class MembershipService {
     }
   }
 
-  async getMembershipByUserAndGroup(userId, groupId) {
-    try {
-      if (!userId || !groupId) {
-        throw new Error('User ID and Group ID are required');
-      }
-
-      const membership = await membershipRepository.findByUserAndGroup(userId, groupId);
-      
-      if (!membership) {
-        throw new Error('Membership not found');
-      }
-
-      return this.formatMembershipResponse(membership);
-
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async updateMembership(membershipId, updateData) {
-    try {
-      this.validateMembershipUpdate(updateData);
-
-      const updatedMembership = await membershipRepository.update(membershipId, updateData);
-      
-      if (!updatedMembership) {
-        throw new Error('Membership not found');
-      }
-
-      return this.formatMembershipResponse(updatedMembership);
-
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async updatePayoutPosition(membershipId, newPosition) {
-    try {
-      if (!membershipId || !newPosition) {
-        throw new Error('Membership ID and new position are required');
-      }
-
-      if (newPosition < 1) {
-        throw new Error('Payout position must be at least 1');
-      }
-
-      const updatedMembership = await membershipRepository.update(membershipId, {
-        payoutPosition: newPosition
-      });
-
-      if (!updatedMembership) {
-        throw new Error('Membership not found');
-      }
-
-      return this.formatMembershipResponse(updatedMembership);
-
-    } catch (error) {
-      throw error;
-    }
-  }
-
   async suspendMember(membershipId, reason, suspendedBy) {
     try {
-      if (!membershipId || !reason) {
-        throw new Error('Membership ID and suspension reason are required');
-      }
-
       const updateData = {
         isActive: false,
         suspendedAt: new Date(),
@@ -158,7 +159,6 @@ class MembershipService {
       };
 
       const updatedMembership = await membershipRepository.update(membershipId, updateData);
-
       if (!updatedMembership) {
         throw new Error('Membership not found');
       }
@@ -172,10 +172,6 @@ class MembershipService {
 
   async reactivateMember(membershipId) {
     try {
-      if (!membershipId) {
-        throw new Error('Membership ID is required');
-      }
-
       const updateData = {
         isActive: true,
         suspendedAt: null,
@@ -183,68 +179,11 @@ class MembershipService {
       };
 
       const updatedMembership = await membershipRepository.update(membershipId, updateData);
-
       if (!updatedMembership) {
         throw new Error('Membership not found');
       }
 
       return this.formatMembershipResponse(updatedMembership);
-
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async updateMemberStats(membershipId, statsUpdate) {
-    try {
-      if (!membershipId) {
-        throw new Error('Membership ID is required');
-      }
-
-      this.validateStatsUpdate(statsUpdate);
-
-      const updatedMembership = await membershipRepository.update(membershipId, statsUpdate);
-
-      if (!updatedMembership) {
-        throw new Error('Membership not found');
-      }
-
-      return this.formatMembershipResponse(updatedMembership);
-
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async calculateMemberTrustScore(membershipId) {
-    try {
-      const membership = await membershipRepository.findByMembershipId(membershipId);
-      
-      if (!membership) {
-        throw new Error('Membership not found');
-      }
-
-      const totalPayments = membership.onTimePayments + membership.latePayments + membership.missedPayments;
-      
-      if (totalPayments === 0) {
-        return 100; 
-      }
-
-     
-      const onTimePercentage = membership.onTimePayments / totalPayments;
-      const latePercentage = membership.latePayments / totalPayments;
-      const missedPercentage = membership.missedPayments / totalPayments;
-
-      
-      const trustScore = (onTimePercentage * 100) + (latePercentage * 60) + (missedPercentage * 0);
-
-      const finalScore = Math.max(0, Math.min(100, Math.round(trustScore)));
-
-      await membershipRepository.update(membershipId, {
-        memberTrustScore: finalScore
-      });
-
-      return finalScore;
 
     } catch (error) {
       throw error;
@@ -262,7 +201,6 @@ class MembershipService {
   async getMemberByPayoutPosition(groupId, payoutPosition) {
     try {
       const membership = await membershipRepository.findByPayoutPosition(groupId, payoutPosition);
-      
       if (!membership) {
         throw new Error(`No member found at payout position ${payoutPosition}`);
       }
@@ -278,11 +216,11 @@ class MembershipService {
   validateMembershipData(membershipData) {
     const { groupId, userId, role } = membershipData;
 
-    if (!groupId || groupId.trim().length === 0) {
+    if (!groupId?.trim()) {
       throw new Error('Group ID is required');
     }
 
-    if (!userId || userId.trim().length === 0) {
+    if (!userId?.trim()) {
       throw new Error('User ID is required');
     }
 
@@ -292,33 +230,6 @@ class MembershipService {
 
     if (membershipData.payoutPosition && membershipData.payoutPosition < 1) {
       throw new Error('Payout position must be at least 1');
-    }
-  }
-
-  validateMembershipUpdate(updateData) {
-    const allowedFields = [
-      'role', 'payoutPosition', 'isActive', 'suspendedAt', 'suspensionReason',
-      'totalContributions', 'totalPayouts', 'missedPayments', 'latePayments',
-      'onTimePayments', 'memberTrustScore', 'hasReceivedPayout', 'lastPayoutReceived', 'notes'
-    ];
-
-    const updateFields = Object.keys(updateData);
-    const invalidFields = updateFields.filter(field => !allowedFields.includes(field));
-    
-    if (invalidFields.length > 0) {
-      throw new Error(`Invalid fields for membership update: ${invalidFields.join(', ')}`);
-    }
-
-    if (updateData.role && !Object.values(MEMBER_ROLE).includes(updateData.role)) {
-      throw new Error('Invalid member role');
-    }
-
-    if (updateData.payoutPosition && updateData.payoutPosition < 1) {
-      throw new Error('Payout position must be at least 1');
-    }
-
-    if (updateData.memberTrustScore && (updateData.memberTrustScore < 0 || updateData.memberTrustScore > 100)) {
-      throw new Error('Trust score must be between 0 and 100');
     }
   }
 

@@ -675,6 +675,99 @@ class AccountService {
       throw error;
     }
   }
+async deleteGroupAccount(groupId, reason = 'Group closed') {
+  try {
+    console.log('🗑️ Starting account deletion for group:', groupId);
+    
+    if (!groupId) {
+      throw new Error('Group ID is required');
+    }
+
+    // Get account details
+    const account = await accountRepository.findByGroupId(groupId);
+    if (!account) {
+      throw new Error('Account not found for this group');
+    }
+
+    if (!account.isActive) {
+      console.log('⚠️ Account already deactivated');
+      return {
+        success: true,
+        message: 'Account already deactivated',
+        accountId: account.accountId,
+        alreadyDeactivated: true
+      };
+    }
+
+    // Warn if account has balance
+    if (account.currentBalance > 0) {
+      console.log(`⚠️ Account has remaining balance: ₦${account.currentBalance.toLocaleString()}`);
+    }
+
+    // Deallocate from Monnify
+    const monnifyResult = await monnifyService.deallocateReservedAccount(account.monnifyAccountReference);
+    
+    if (!monnifyResult.success) {
+      throw new Error(`Failed to deallocate from Monnify: ${monnifyResult.message}`);
+    }
+
+    // Update account in database (soft delete)
+    const updateData = {
+      isActive: false,
+      notes: `Account deleted: ${reason}. Balance at deletion: ₦${account.currentBalance}`,
+      deactivatedAt: new Date()
+    };
+
+    const updatedAccount = await accountRepository.update(account.accountId, updateData);
+
+    console.log('✅ Account deleted successfully');
+
+    return {
+      success: true,
+      message: 'Account deleted successfully',
+      accountId: account.accountId,
+      groupId: account.groupId,
+      monnifyReference: account.monnifyAccountReference,
+      finalBalance: account.currentBalance,
+      deletedAt: new Date()
+    };
+
+  } catch (error) {
+    console.error('💥 Account deletion failed:', error.message);
+    throw new Error(`Failed to delete group account: ${error.message}`);
+  }
+}
+
+async getAccountDeletionSummary(groupId) {
+  try {
+    const account = await accountRepository.findByGroupId(groupId);
+    if (!account) {
+      throw new Error('Account not found for this group');
+    }
+
+    const warnings = [];
+    
+    if (account.currentBalance > 0) {
+      warnings.push(`Account has remaining balance: ₦${account.currentBalance.toLocaleString()}`);
+    }
+
+    if (!account.isActive) {
+      warnings.push('Account is already deactivated');
+    }
+
+    return {
+      accountId: account.accountId,
+      groupId: account.groupId,
+      accountNumber: account.virtualAccountNumber,
+      currentBalance: account.currentBalance,
+      isActive: account.isActive,
+      warnings: warnings
+    };
+
+  } catch (error) {
+    throw error;
+  }
+}
 
   async checkAccountHealth(groupId) {
     try {
