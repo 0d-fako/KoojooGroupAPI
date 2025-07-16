@@ -8,6 +8,7 @@ const GROUP_STATUS = {
 };
 
 const FREQUENCY_TYPE = {
+    
     DAILY: 'daily',
     WEEKLY: 'weekly',
     BI_WEEKLY: 'bi_weekly',
