@@ -1,3 +1,4 @@
+// integrations/webhookService.js - Clean & Focused
 const crypto = require('crypto');
 const sha512 = require('js-sha512').sha512;
 const paymentService = require('../paymentTransaction/services/paymentService');
@@ -7,7 +8,9 @@ class WebhookService {
   
   async handleMonnifyWebhook(webhookData, signature) {
     try {
+      console.log(`🔔 Processing webhook: ${webhookData.eventType}`);
       
+      // Step 1: Verify signature
       const isValid = this.verifySignature(webhookData, signature);
       if (!isValid) {
         throw new Error('Invalid webhook signature');
@@ -15,7 +18,7 @@ class WebhookService {
       
       // Step 2: Check for duplicates
       if (this.isDuplicateWebhook(webhookData)) {
-        return { success: true, message: 'Duplicate ignored' };
+        return { success: true, message: 'Duplicate webhook ignored' };
       }
       
       // Step 3: Process based on event type
@@ -30,6 +33,12 @@ class WebhookService {
         case 'FAILED_DISBURSEMENT':
           result = await this.processFailedDisbursement(webhookData.eventData);
           break;
+        case 'SUCCESSFUL_REFUND':
+          result = await this.processSuccessfulRefund(webhookData.eventData);
+          break;
+        case 'FAILED_REFUND':
+          result = await this.processFailedRefund(webhookData.eventData);
+          break;
         default:
           result = { success: true, message: 'Event type not handled' };
       }
@@ -40,6 +49,7 @@ class WebhookService {
       return result;
       
     } catch (error) {
+      console.error('💥 Webhook processing failed:', error.message);
       this.logWebhook(webhookData, 'failed', error.message);
       throw error;
     }
@@ -179,6 +189,50 @@ class WebhookService {
     }
   }
   
+  async processSuccessfulRefund(eventData) {
+    try {
+      console.log('🔄 Processing successful refund...');
+      
+      const reference = eventData.transactionReference;
+      const amount = eventData.amountRefunded;
+      
+      console.log(`✅ Refund completed: ${reference} - ₦${amount?.toLocaleString()}`);
+      
+      return {
+        success: true,
+        message: 'Refund processed',
+        reference: reference,
+        amount: amount
+      };
+      
+    } catch (error) {
+      console.error('💥 Refund processing failed:', error.message);
+      throw error;
+    }
+  }
+  
+  async processFailedRefund(eventData) {
+    try {
+      console.log('❌ Processing failed refund...');
+      
+      const reference = eventData.transactionReference;
+      const reason = eventData.failureReason || 'Unknown reason';
+      
+      console.log(`❌ Refund failed: ${reference} - ${reason}`);
+      
+      return {
+        success: true,
+        message: 'Failed refund processed',
+        reference: reference,
+        reason: reason
+      };
+      
+    } catch (error) {
+      console.error('💥 Failed refund processing error:', error.message);
+      throw error;
+    }
+  }
+  
   logWebhook(webhookData, status, error = null) {
     const logEntry = {
       eventType: webhookData?.eventType,
@@ -194,7 +248,7 @@ class WebhookService {
       transactionReference: logEntry.transactionReference
     });
     
-    // Store in memory
+    // Store in memory (consider using Redis or database for production)
     if (!global.webhookLogs) global.webhookLogs = [];
     global.webhookLogs.push(logEntry);
     

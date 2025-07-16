@@ -1,4 +1,4 @@
-// groups/controllers/groupController.js (Enhanced Version)
+
 const groupService = require('../services/groupService');
 
 class GroupController {

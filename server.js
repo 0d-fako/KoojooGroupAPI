@@ -1,4 +1,3 @@
-// server.js (Updated with new routes)
 const express = require("express")
 const mongoose = require("mongoose")
 const dotenv = require("dotenv")
@@ -22,6 +21,8 @@ const inviteRoutes = require('./inviteLink/routes/inviteRoutes');
 const paymentRoutes = require('./paymentTransaction/routes/paymentRoutes');
 const payoutRoutes = require('./payoutTransaction/routes/payoutRoutes');
 
+const webhookRoutes = require('./integrations/routes/webhookRoutes');
+
 // Register routes
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/memberships', membershipRoutes);
@@ -29,6 +30,7 @@ app.use('/api/v1/accounts', accountRoutes);
 app.use('/api/v1/invites', inviteRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/payouts', payoutRoutes);
+app.use('/api/v1/webhooks', webhookRoutes);
 
 const PORT = process.env.PORT
 

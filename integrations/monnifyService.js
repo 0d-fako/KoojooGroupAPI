@@ -1,4 +1,4 @@
-// integrations/monnifyService.js - Cleaned & Complete
+// integrations/monnifyService.js - Complete & Consistent
 const axios = require('axios');
 
 class MonnifyService {
@@ -38,7 +38,7 @@ class MonnifyService {
       });
 
       // Check if login was successful
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         this.accessToken = response.data.responseBody.accessToken;
         
         // Set token expiry (subtract 5 minutes for safety)
@@ -129,7 +129,7 @@ class MonnifyService {
         timeout: 25000
       });
       
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         console.log('✅ Reserved account created successfully');
         return response.data.responseBody;
       } else {
@@ -174,7 +174,7 @@ class MonnifyService {
         timeout: 15000
       });
       
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         console.log('✅ Reserved account deallocated successfully');
         return {
           success: true,
@@ -235,7 +235,7 @@ class MonnifyService {
         timeout: 15000
       });
 
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         return response.data.responseBody;
       } else {
         throw new Error(response.data?.responseMessage || 'Failed to get account details');
@@ -263,7 +263,7 @@ class MonnifyService {
         timeout: 15000
       });
 
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         return response.data.responseBody;
       } else {
         throw new Error(response.data?.responseMessage || 'Failed to get transactions');
@@ -290,7 +290,7 @@ class MonnifyService {
         timeout: 15000
       });
 
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         return response.data.responseBody;
       } else {
         throw new Error(response.data?.responseMessage || 'Failed to get banks');
@@ -318,7 +318,7 @@ class MonnifyService {
         timeout: 15000
       });
 
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         return response.data.responseBody;
       } else {
         throw new Error(response.data?.responseMessage || 'Failed to validate account');
@@ -345,7 +345,7 @@ class MonnifyService {
         timeout: 15000
       });
 
-      if (response.data && response.data.requestSuccessful === true) {
+      if (response.data?.requestSuccessful === true) {
         return response.data.responseBody;
       } else {
         throw new Error(response.data?.responseMessage || 'Failed to verify transaction');
@@ -385,6 +385,28 @@ class MonnifyService {
           hasSecretKey: !!this.secretKey,
           hasContractCode: !!this.contractCode
         }
+      };
+    }
+  }
+
+  async testBanks() {
+    try {
+      console.log('🧪 Testing banks list...');
+      const banks = await this.getBanks();
+      
+      return { 
+        success: true, 
+        message: 'Banks list retrieved successfully',
+        data: {
+          totalBanks: banks.length,
+          sampleBanks: banks.slice(0, 3)
+        }
+      };
+    } catch (error) {
+      console.error('💥 Banks test failed:', error.message);
+      return { 
+        success: false, 
+        message: `Banks list failed: ${error.message}`
       };
     }
   }
