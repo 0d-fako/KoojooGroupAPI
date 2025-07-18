@@ -1,4 +1,3 @@
-// memberships/services/membershipService.js
 const membershipRepository = require('../repositories/membershipRepository');
 const { v4: uuidv4 } = require('uuid');
 const { MEMBER_ROLE } = require('../../groups/enums/enums');
@@ -20,8 +19,11 @@ class MembershipService {
       // Calculate trust score for new member
       const trustScore = this.calculateInitialTrustScore(membershipData);
 
-      // Get next payout position
-      const payoutPosition = await membershipRepository.getNextPayoutPosition(membershipData.groupId);
+      // Get next payout position if not provided
+      let payoutPosition = membershipData.payoutPosition;
+      if (!payoutPosition) {
+        payoutPosition = await membershipRepository.getNextPayoutPosition(membershipData.groupId);
+      }
 
       const membership = {
         membershipId: uuidv4(),
@@ -99,6 +101,33 @@ class MembershipService {
 
     } catch (error) {
       throw new Error(`Failed to update member stats: ${error.message}`);
+    }
+  }
+
+  // NEW METHOD: Update payout position specifically
+  async updatePayoutPosition(membershipId, payoutPosition) {
+    try {
+      if (!membershipId) {
+        throw new Error('Membership ID is required');
+      }
+
+      if (!payoutPosition || payoutPosition < 1) {
+        throw new Error('Valid payout position is required');
+      }
+
+      const updatedMembership = await membershipRepository.update(membershipId, {
+        payoutPosition: payoutPosition
+      });
+
+      if (!updatedMembership) {
+        throw new Error('Membership not found');
+      }
+
+      console.log(`✅ Payout position updated: ${membershipId} -> Position ${payoutPosition}`);
+      return this.formatMembershipResponse(updatedMembership);
+
+    } catch (error) {
+      throw new Error(`Failed to update payout position: ${error.message}`);
     }
   }
 
@@ -236,7 +265,8 @@ class MembershipService {
   validateStatsUpdate(statsUpdate) {
     const allowedStatsFields = [
       'totalContributions', 'totalPayouts', 'missedPayments', 
-      'latePayments', 'onTimePayments', 'hasReceivedPayout', 'lastPayoutReceived'
+      'latePayments', 'onTimePayments', 'hasReceivedPayout', 
+      'lastPayoutReceived', 'payoutPosition' // ADDED payoutPosition
     ];
 
     const updateFields = Object.keys(statsUpdate);
@@ -247,7 +277,7 @@ class MembershipService {
     }
 
     // Validate numeric fields are non-negative
-    const numericFields = ['totalContributions', 'totalPayouts', 'missedPayments', 'latePayments', 'onTimePayments'];
+    const numericFields = ['totalContributions', 'totalPayouts', 'missedPayments', 'latePayments', 'onTimePayments', 'payoutPosition'];
     numericFields.forEach(field => {
       if (statsUpdate[field] !== undefined && statsUpdate[field] < 0) {
         throw new Error(`${field} cannot be negative`);

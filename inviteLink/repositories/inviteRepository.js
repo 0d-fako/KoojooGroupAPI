@@ -1,4 +1,6 @@
+// inviteLink/repositories/inviteRepository.js (Fixed)
 const InviteLink = require('../models/inviteLink');
+const { INVITE_STATUS } = require('../../groups/enums/enums'); // Added missing import
 
 class InviteRepository {
   async create(inviteData) {
@@ -103,4 +105,4 @@ class InviteRepository {
   }
 }
 
-module.exports = new InviteRepository()
+module.exports = new InviteRepository();
