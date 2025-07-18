@@ -146,8 +146,13 @@ class GroupService {
         throw new Error('Group is already at maximum capacity');
       }
       
+      const userData = { userId };
+      if (phoneNumber) {
+        userData.phoneNumber = phoneNumber;
+      }
+      
       // Validate invite and create membership
-      const joinResult = await inviteService.validateAndUseInvite(inviteCode, { userId });
+      const joinResult = await inviteService.validateAndUseInvite(inviteCode, userData);
       
       if (!joinResult.membershipCreated) {
         throw new Error('Failed to create membership');

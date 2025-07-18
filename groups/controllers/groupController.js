@@ -79,36 +79,49 @@ class GroupController {
   }
 
   async addMemberToGroup(req, res) {
-    try {
-      const { groupId } = req.params;
-      const { userId, inviteCode } = req.body;
+  try {
+    const { groupId } = req.params;
+    
+    // ✅ FIXED: Extract phoneNumber from request body
+    const { userId, inviteCode, phoneNumber } = req.body;
 
-      if (!userId || !inviteCode) {
-        return res.status(400).json({
-          success: false,
-          message: 'User ID and invite code are required'
-        });
-      }
-
-      const result = await groupService.addMemberToGroup(groupId, userId, inviteCode);
-
-      res.json({
-        success: true,
-        message: 'Member added to group successfully',
-        data: result
-      });
-
-    } catch (error) {
-      console.error('Add member to group error:', error);
-      
-      const statusCode = error.message.includes('not found') ? 404 : 400;
-      
-      res.status(statusCode).json({
+    if (!userId || !inviteCode) {
+      return res.status(400).json({
         success: false,
-        message: error.message || 'Failed to add member to group'
+        message: 'User ID and invite code are required',
+        required_fields: {
+          userId: 'string',
+          inviteCode: 'string',
+          phoneNumber: 'string (optional but recommended)'
+        }
       });
     }
+
+   
+    const result = await groupService.addMemberToGroup(groupId, userId, inviteCode, phoneNumber);
+
+    const responseMessage = result.autoActivated 
+      ? 'Member added and group auto-activated!'
+      : 'Member added successfully';
+
+    res.json({
+      success: true,
+      message: responseMessage,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('💥 Add member error:', error.message);
+    
+    const statusCode = this.getStatusCodeFromError(error.message);
+    
+    res.status(statusCode).json({
+      success: false,
+      message: error.message,
+      error_code: this.getErrorCode(error.message)
+    });
   }
+}
 
   async advanceToNextTurn(req, res) {
     try {
