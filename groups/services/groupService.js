@@ -136,56 +136,58 @@ class GroupService {
   }
   
  
-  async addMemberToGroup(groupId, userId, inviteCode) {
-    try {
-      console.log('👥 Adding member to group:', { groupId, userId });
-      
-      const group = await this.getGroupByGroupId(groupId);
-      
-      if (group.currentMembers >= group.maxMembers) {
-        throw new Error('Group is already at maximum capacity');
-      }
-      
-      const userData = { userId };
-      if (phoneNumber) {
-        userData.phoneNumber = phoneNumber;
-      }
-      
-      // Validate invite and create membership
-      const joinResult = await inviteService.validateAndUseInvite(inviteCode, userData);
-      
-      if (!joinResult.membershipCreated) {
-        throw new Error('Failed to create membership');
-      }
-      
-      // Update group member count
-      const updateData = {
-        currentMembers: group.currentMembers + 1
-      };
-      
-      // Auto-activate if requirements are met
-      if (updateData.currentMembers >= group.requiredMembers && group.status === GROUP_STATUS.PENDING_ACTIVATION) {
-        updateData.status = GROUP_STATUS.ACTIVE;
-        updateData.activatedAt = new Date();
-        updateData.nextPayoutDate = this.calculateNextPayoutDate(group.contributionFrequency);
-        
-        // Initialize payout order when group becomes active
-        await this.initializePayoutOrder(groupId);
-      }
-      
-      const updatedGroup = await groupRepository.update(groupId, updateData);
-      
-      return {
-        group: this.formatGroupResponse(updatedGroup),
-        membershipCreated: true,
-        payoutPosition: joinResult.payoutPosition,
-        autoActivated: updateData.status === GROUP_STATUS.ACTIVE
-      };
-      
-    } catch (error) {
-      throw new Error(`Failed to add member to group: ${error.message}`);
+  async addMemberToGroup(groupId, userId, inviteCode, phoneNumber = null) {
+  try {
+    console.log('👥 Adding member to group:', { groupId, userId, phoneNumber });
+    
+    const group = await this.getGroupByGroupId(groupId);
+    
+    if (group.currentMembers >= group.maxMembers) {
+      throw new Error('Group is already at maximum capacity');
     }
+    
+    const userData = { userId };
+    if (phoneNumber) {
+      userData.phoneNumber = phoneNumber;
+    }
+    
+    console.log('📋 User data being sent to invite service:', userData);
+    
+    // Validate invite and create membership
+    const joinResult = await inviteService.validateAndUseInvite(inviteCode, userData);
+    
+    if (!joinResult.membershipCreated) {
+      throw new Error('Failed to create membership');
+    }
+    
+    // Update group member count
+    const updateData = {
+      currentMembers: group.currentMembers + 1
+    };
+    
+    // Auto-activate if requirements are met
+    if (updateData.currentMembers >= group.requiredMembers && group.status === GROUP_STATUS.PENDING_ACTIVATION) {
+      updateData.status = GROUP_STATUS.ACTIVE;
+      updateData.activatedAt = new Date();
+      updateData.nextPayoutDate = this.calculateNextPayoutDate(group.contributionFrequency);
+      
+      // Initialize payout order when group becomes active
+      await this.initializePayoutOrder(groupId);
+    }
+    
+    const updatedGroup = await groupRepository.update(groupId, updateData);
+    
+    return {
+      group: this.formatGroupResponse(updatedGroup),
+      membershipCreated: true,
+      payoutPosition: joinResult.payoutPosition,
+      autoActivated: updateData.status === GROUP_STATUS.ACTIVE
+    };
+    
+  } catch (error) {
+    throw new Error(`Failed to add member to group: ${error.message}`);
   }
+}
   
 
   async initializePayoutOrder(groupId) {

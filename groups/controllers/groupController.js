@@ -1,4 +1,3 @@
-
 const groupService = require('../services/groupService');
 
 class GroupController {
@@ -11,13 +10,11 @@ class GroupController {
         contributionFrequency,
         requiredMembers,
         maxMembers,
-        treasurerData // New: Contains phone, email, and account data for virtual account
+        treasurerData
       } = req.body;
 
-      // For now, using temporary treasurer ID (replace with actual auth)
       const treasurerId = req.body.treasurerId || 'temp-treasurer-123';
 
-      // Validate treasurer data
       if (!treasurerData || !treasurerData.phoneNumber || !treasurerData.accountData) {
         return res.status(400).json({
           success: false,
@@ -34,12 +31,11 @@ class GroupController {
         maxMembers
       };
 
-      // Create group with virtual account, treasurer membership, and invite link
       const result = await groupService.createGroup(groupData, treasurerId, treasurerData);
 
       res.status(201).json({
         success: true,
-        message: 'Group created successfully with virtual account and invite link',
+        message: 'Group created successfully',
         data: result
       });
 
@@ -73,60 +69,54 @@ class GroupController {
       
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to activate group'
+        message: error.message
       });
     }
   }
 
   async addMemberToGroup(req, res) {
-  try {
-    const { groupId } = req.params;
-    
-    // ✅ FIXED: Extract phoneNumber from request body
-    const { userId, inviteCode, phoneNumber } = req.body;
+    try {
+      const { groupId } = req.params;
+      const { userId, inviteCode, phoneNumber } = req.body;
 
-    if (!userId || !inviteCode) {
-      return res.status(400).json({
+      if (!userId || !inviteCode) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID and invite code are required'
+        });
+      }
+
+      const result = await groupService.addMemberToGroup(groupId, userId, inviteCode, phoneNumber);
+
+      const responseMessage = result.autoActivated 
+        ? 'Member added and group auto-activated!'
+        : 'Member added successfully';
+
+      res.json({
+        success: true,
+        message: responseMessage,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('Add member error:', error.message);
+      
+      // Simple, direct error handling
+      let statusCode = 400;
+      if (error.message.includes('not found')) statusCode = 404;
+      if (error.message.includes('already')) statusCode = 409;
+      if (error.message.includes('full') || error.message.includes('capacity')) statusCode = 422;
+      
+      res.status(statusCode).json({
         success: false,
-        message: 'User ID and invite code are required',
-        required_fields: {
-          userId: 'string',
-          inviteCode: 'string',
-          phoneNumber: 'string (optional but recommended)'
-        }
+        message: error.message
       });
     }
-
-   
-    const result = await groupService.addMemberToGroup(groupId, userId, inviteCode, phoneNumber);
-
-    const responseMessage = result.autoActivated 
-      ? 'Member added and group auto-activated!'
-      : 'Member added successfully';
-
-    res.json({
-      success: true,
-      message: responseMessage,
-      data: result
-    });
-
-  } catch (error) {
-    console.error('💥 Add member error:', error.message);
-    
-    const statusCode = this.getStatusCodeFromError(error.message);
-    
-    res.status(statusCode).json({
-      success: false,
-      message: error.message,
-      error_code: this.getErrorCode(error.message)
-    });
   }
-}
 
   async advanceToNextTurn(req, res) {
     try {
       const { groupId } = req.params;
-      
       const updatedGroup = await groupService.advanceToNextTurn(groupId);
 
       res.json({
@@ -139,10 +129,9 @@ class GroupController {
       console.error('Advance to next turn error:', error);
       
       const statusCode = error.message.includes('not found') ? 404 : 400;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to advance to next turn'
+        message: error.message
       });
     }
   }
@@ -150,7 +139,6 @@ class GroupController {
   async initializePayoutOrder(req, res) {
     try {
       const { groupId } = req.params;
-      
       const payoutOrder = await groupService.initializePayoutOrder(groupId);
 
       res.json({
@@ -163,10 +151,9 @@ class GroupController {
       console.error('Initialize payout order error:', error);
       
       const statusCode = error.message.includes('not found') ? 404 : 400;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to initialize payout order'
+        message: error.message
       });
     }
   }
@@ -174,7 +161,6 @@ class GroupController {
   async getGroup(req, res) {
     try {
       const { groupId } = req.params;
-      
       const group = await groupService.getGroupByGroupId(groupId);
 
       res.json({
@@ -186,10 +172,9 @@ class GroupController {
       console.error('Get group error:', error);
       
       const statusCode = error.message === 'Group not found' ? 404 : 500;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to fetch group'
+        message: error.message
       });
     }
   }
@@ -217,7 +202,6 @@ class GroupController {
   async getTreasurerGroups(req, res) {
     try {
       const { treasurerId } = req.params;
-      
       const groups = await groupService.getGroupsByTreasurer(treasurerId);
 
       res.json({
@@ -231,7 +215,7 @@ class GroupController {
       
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to fetch groups'
+        message: error.message
       });
     }
   }
@@ -253,10 +237,9 @@ class GroupController {
       console.error('Update group error:', error);
       
       const statusCode = error.message === 'Group not found' ? 404 : 400;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to update group'
+        message: error.message
       });
     }
   }
@@ -264,18 +247,9 @@ class GroupController {
   async getGroupSummary(req, res) {
     try {
       const { groupId } = req.params;
-      
-      // Get group details
       const group = await groupService.getGroupByGroupId(groupId);
       
-      // Get additional summary data (you can expand this)
-      const summary = {
-        group,
-        // Add more summary data as needed:
-        // members: await membershipService.getGroupMemberships(groupId),
-        // account: await accountService.getAccountByGroupId(groupId),
-        // recentPayments: await paymentService.getGroupPayments(groupId, null, null)
-      };
+      const summary = { group };
 
       res.json({
         success: true,
@@ -286,10 +260,9 @@ class GroupController {
       console.error('Get group summary error:', error);
       
       const statusCode = error.message.includes('not found') ? 404 : 500;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to fetch group summary'
+        message: error.message
       });
     }
   }
@@ -315,10 +288,9 @@ class GroupController {
       console.error('Pause group error:', error);
       
       const statusCode = error.message === 'Group not found' ? 404 : 400;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to pause group'
+        message: error.message
       });
     }
   }
@@ -344,10 +316,9 @@ class GroupController {
       console.error('Resume group error:', error);
       
       const statusCode = error.message === 'Group not found' ? 404 : 400;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to resume group'
+        message: error.message
       });
     }
   }
@@ -371,10 +342,9 @@ class GroupController {
       console.error('Complete group error:', error);
       
       const statusCode = error.message === 'Group not found' ? 404 : 400;
-      
       res.status(statusCode).json({
         success: false,
-        message: error.message || 'Failed to complete group'
+        message: error.message
       });
     }
   }
