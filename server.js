@@ -20,10 +20,13 @@ const accountRoutes = require('./accounts/routes/accountRoutes');
 const inviteRoutes = require('./inviteLink/routes/inviteRoutes');
 const paymentRoutes = require('./paymentTransaction/routes/paymentRoutes');
 const payoutRoutes = require('./payoutTransaction/routes/payoutRoutes');
-
+const userRoutes = require('./users/routes/userRoutes');
 const webhookRoutes = require('./integrations/routes/webhookRoutes');
 
 // Register routes
+
+
+app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/memberships', membershipRoutes);
 app.use('/api/v1/accounts', accountRoutes);
