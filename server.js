@@ -20,7 +20,7 @@ const accountRoutes = require('./accounts/routes/accountRoutes');
 const inviteRoutes = require('./inviteLink/routes/inviteRoutes');
 const paymentRoutes = require('./paymentTransaction/routes/paymentRoutes');
 const payoutRoutes = require('./payoutTransaction/routes/payoutRoutes');
-const userRoutes = require('./users/routes/userRoutes');
+const userRoutes = require('./user/routes/userRoutes');
 const webhookRoutes = require('./integrations/routes/webhookRoutes');
 
 // Register routes
@@ -50,6 +50,8 @@ mongoose.connect(process.env.MONGO_URI )
         console.log(`   Invites:     POST/GET http://localhost:${PORT}/api/v1/invites`);
         console.log(`   Payments:    POST/GET http://localhost:${PORT}/api/v1/payments`);
         console.log(`   Payouts:     POST/GET http://localhost:${PORT}/api/v1/payouts`);
+        console.log(`   Webhooks:    POST http://localhost:${PORT}/api/v1/webhooks`);
+        console.log(`   Users:       POST/GET http://localhost:${PORT}/api/v1/users`);
     });
 })
 .catch((err) => {
