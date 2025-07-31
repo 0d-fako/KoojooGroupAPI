@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Koojoo - Digital Thrift Platform</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    // API Configuration
+    const API_BASE = 'https://koojoo-server.onrender.com/api/v1'; 
+    // Utility Functions
+    const formatCurrency = (amount) => {
+      return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
+    };
+    
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('en-NG');
+    };
+
+    // Local Storage for user session
+    const getStoredUser = () => {
+      try {
+        return JSON.parse(localStorage.getItem('koojoo_user'));
+      } catch {
+        return null;
+      }
+    };
+
+    const setStoredUser = (user) => {
+      localStorage.setItem('koojoo_user', JSON.stringify(user));
+    };
+
+    const clearStoredUser = () => {
+      localStorage.removeItem('koojoo_user');
+    };
+
+    // Main App Component
+    function App() {
+      const [user, setUser] = useState(getStoredUser());
+      const [currentView, setCurrentView] = useState('userDashboard');
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState(null);
+
+      // API Helper
+      const apiCall = async (endpoint, options = {}) => {
+        try {
+          setError(null);
+          const response = await fetch(`${API_BASE}${endpoint}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              ...options.headers
+            },
+            ...options
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'API request failed');
+          }
+          
+          return data;
+        } catch (err) {
+          setError(err.message);
+          throw err;
+        }
+      };
+
+      const logout = () => {
+        setUser(null);
+        clearStoredUser();
+        setCurrentView('userDashboard');
+      };
+
+      // If not logged in, show auth
+      if (!user) {
+        return <AuthScreen apiCall={apiCall} setUser={setUser} error={error} loading={loading} setLoading={setLoading} />;
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          {/* Header */}
+          <header className="gradient-bg text-white">
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold">Koojoo</h1>
+                  <p className="text-blue-100 text-sm">Digital Thrift Platform</p>
+                  <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  BVN (for virtual account) *
+                </label>
+                <input
+                  type="text"
+                  value={formData.bvn}
+                  onChange={(e) => setFormData({...formData, bvn: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your BVN"
+                  required
+                />
+              </div>
+            </div>
+                <div className="flex items-center space-x-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{user.name}</p>
+                    <p className="text-xs text-blue-200">{user.email}</p>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-sm"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Navigation */}
+          <nav className="bg-white shadow-sm border-b">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="flex space-x-6">
+                {[
+                  { id: 'userDashboard', label: 'My Dashboard' },
+                  { id: 'createGroup', label: '➕ Create Group' },
+                  { id: 'joinGroup', label: '🔗 Join Group' },
+                  { id: 'transactions', label: '💰 Transactions' }
+                ].map(nav => (
+                  <button
+                    key={nav.id}
+                    onClick={() => setCurrentView(nav.id)}
+                    className={`py-3 px-2 border-b-2 font-medium text-sm ${
+                      currentView === nav.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {nav.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </nav>
+
+          {/* Error Display */}
+          {error && (
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto px-4 py-6">
+            {currentView === 'userDashboard' && (
+              <UserDashboard user={user} apiCall={apiCall} setCurrentView={setCurrentView} />
+            )}
+            {currentView === 'createGroup' && (
+              <CreateGroup user={user} apiCall={apiCall} setCurrentView={setCurrentView} />
+            )}
+            {currentView === 'joinGroup' && (
+              <JoinGroup user={user} apiCall={apiCall} />
+            )}
+            {currentView === 'transactions' && (
+              <Transactions user={user} apiCall={apiCall} />
+            )}
+            {currentView.startsWith('group-') && (
+              <GroupDashboard 
+                groupId={currentView.split('-')[1]} 
+                user={user} 
+                apiCall={apiCall} 
+                setCurrentView={setCurrentView}
+              />
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // Authentication Screen
+    function AuthScreen({ apiCall, setUser, error, loading, setLoading }) {
+      const [isLogin, setIsLogin] = useState(true);
+      const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phoneNumber: '',
+        password: ''
+      });
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+          if (isLogin) {
+            // Login
+            const data = await apiCall('/users/login', {
+              method: 'POST',
+              body: JSON.stringify({
+                email: formData.email,
+                password: formData.password
+              })
+            });
+            
+            if (data.success) {
+              setStoredUser(data.data);
+              setUser(data.data);
+            }
+          } else {
+            // Register
+            const data = await apiCall('/users/register', {
+              method: 'POST',
+              body: JSON.stringify(formData)
+            });
+            
+            if (data.success) {
+              setStoredUser(data.data);
+              setUser(data.data);
+            }
+          }
+        } catch (err) {
+          console.error('Auth error:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg card-shadow w-full max-w-md p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900">🏦 Koojoo</h1>
+              <p className="text-gray-600 mt-2">Digital Thrift Platform</p>
+            </div>
+
+            <div className="flex mb-6">
+              <button
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-2 text-center font-medium ${
+                  isLogin ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'
+                }`}
+              >
+                Login
+              </button>
+              <button
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-2 text-center font-medium ${
+                  !isLogin ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'
+                }`}
+              >
+                Register
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              )}
+              
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+
+              {!isLogin && (
+                <input
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              )}
+              
+              <input
+                type="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? '⏳ Please wait...' : (isLogin ? 'Login' : 'Create Account')}
+              </button>
+            </form>
+
+            {error && (
+              <div className="mt-4 text-red-600 text-sm text-center">
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // User Dashboard Component
+    function UserDashboard({ user, apiCall, setCurrentView }) {
+      const [groups, setGroups] = useState([]);
+      const [memberships, setMemberships] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const fetchUserData = async () => {
+          try {
+            // Fetch groups where user is treasurer
+            const groupsData = await apiCall(`/groups/treasurer/${user.userId}`);
+            setGroups(groupsData.data || []);
+
+            // Fetch user memberships
+            const membershipsData = await apiCall(`/memberships/user/${user.userId}`);
+            setMemberships(membershipsData.data || []);
+          } catch (err) {
+            console.error('Error fetching user data:', err);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        fetchUserData();
+      }, [user.userId]);
+
+      if (loading) {
+        return (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-6">
+          {/* Welcome Section */}
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <h2 className="text-2xl font-bold text-gray-900">Welcome back, {user.name}! 👋</h2>
+            <p className="text-gray-600 mt-2">Here's your thrift groups overview</p>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-lg card-shadow">
+              <div className="flex items-center">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <span className="text-2xl">👑</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Groups I Lead</p>
+                  <p className="text-2xl font-bold text-gray-900">{groups.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg card-shadow">
+              <div className="flex items-center">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <span className="text-2xl">👥</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Groups I'm In</p>
+                  <p className="text-2xl font-bold text-gray-900">{memberships.length}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg card-shadow">
+              <div className="flex items-center">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <span className="text-2xl">⭐</span>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Trust Score</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {memberships.length > 0 
+                      ? Math.round(memberships.reduce((sum, m) => sum + m.memberTrustScore, 0) / memberships.length)
+                      : 100
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => setCurrentView('createGroup')}
+                className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+              >
+                <span className="text-2xl mr-3">➕</span>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">Create New Group</p>
+                  <p className="text-sm text-gray-600">Start a new thrift group</p>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setCurrentView('joinGroup')}
+                className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
+              >
+                <span className="text-2xl mr-3">🔗</span>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900">Join Group</p>
+                  <p className="text-sm text-gray-600">Use invite code to join</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Groups I Lead */}
+          {groups.length > 0 && (
+            <div className="bg-white rounded-lg card-shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Groups I Lead 👑</h3>
+              </div>
+              <div className="divide-y divide-gray-200">
+                {groups.map(group => (
+                  <GroupCard 
+                    key={group.groupId} 
+                    group={group} 
+                    onClick={() => setCurrentView(`group-${group.groupId}`)}
+                    isLeader={true}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Groups I'm In */}
+          {memberships.length > 0 && (
+            <div className="bg-white rounded-lg card-shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Groups I'm In 👥</h3>
+              </div>
+              <div className="divide-y divide-gray-200">
+                {memberships.map(membership => (
+                  <MembershipCard 
+                    key={membership.membershipId} 
+                    membership={membership}
+                    onClick={() => setCurrentView(`group-${membership.groupId}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Group Card Component
+    function GroupCard({ group, onClick, isLeader = false }) {
+      const getStatusColor = (status) => {
+        switch (status) {
+          case 'active': return 'bg-green-100 text-green-800';
+          case 'pending_activation': return 'bg-yellow-100 text-yellow-800';
+          case 'completed': return 'bg-blue-100 text-blue-800';
+          default: return 'bg-gray-100 text-gray-800';
+        }
+      };
+
+      return (
+        <div 
+          className="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
+          onClick={onClick}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center">
+                <h3 className="text-lg font-medium text-gray-900">{group.groupName}</h3>
+                {isLeader && <span className="ml-2 text-lg">👑</span>}
+              </div>
+              <p className="text-sm text-gray-600 mt-1">{group.description}</p>
+              
+              <div className="flex items-center mt-3 space-x-4">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(group.status)}`}>
+                  {group.status.replace('_', ' ').toUpperCase()}
+                </span>
+                <span className="text-sm text-gray-500">
+                  {group.currentMembers}/{group.maxMembers} members
+                </span>
+                <span className="text-sm text-gray-500">
+                  Cycle {group.currentCycle}, Turn {group.currentTurn}
+                </span>
+              </div>
+            </div>
+            
+            <div className="text-right">
+              <p className="text-lg font-bold text-gray-900">
+                {formatCurrency(group.contributionAmount)}
+              </p>
+              <p className="text-sm text-gray-600">{group.contributionFrequency}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Membership Card Component
+    function MembershipCard({ membership, onClick }) {
+      return (
+        <div 
+          className="p-6 hover:bg-gray-50 cursor-pointer transition-colors"
+          onClick={onClick}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-medium text-gray-900">Group Member</h3>
+              <div className="flex items-center mt-2 space-x-4">
+                <span className="text-sm text-gray-600">
+                  Role: <span className="font-medium">{membership.role}</span>
+                </span>
+                <span className="text-sm text-gray-600">
+                  Position: <span className="font-medium">#{membership.payoutPosition}</span>
+                </span>
+                <span className="text-sm text-gray-600">
+                  Trust Score: <span className="font-medium">{membership.memberTrustScore}/100</span>
+                </span>
+              </div>
+            </div>
+            
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Contributions</p>
+              <p className="text-lg font-bold text-gray-900">{membership.totalContributions}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Create Group Component
+    function CreateGroup({ user, apiCall, setCurrentView }) {
+      const [formData, setFormData] = useState({
+        groupName: '',
+        description: '',
+        contributionAmount: '',
+        contributionFrequency: 'monthly',
+        requiredMembers: '',
+        maxMembers: '',
+        customerEmail: user.email,
+        bvn: '',
+        phoneNumber: user.phoneNumber || ''
+      });
+      const [loading, setLoading] = useState(false);
+      const [success, setSuccess] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+          const groupData = {
+            groupName: formData.groupName,
+            description: formData.description,
+            contributionAmount: parseInt(formData.contributionAmount),
+            contributionFrequency: formData.contributionFrequency,
+            requiredMembers: parseInt(formData.requiredMembers),
+            maxMembers: parseInt(formData.maxMembers),
+            treasurerId: user.userId,
+            treasurerData: {
+              phoneNumber: formData.phoneNumber,
+              email: formData.customerEmail,
+              accountData: {
+                customerEmail: formData.customerEmail,
+                bvn: formData.bvn
+              }
+            }
+          };
+
+          const response = await apiCall('/groups', {
+            method: 'POST',
+            body: JSON.stringify(groupData)
+          });
+
+          if (response.success) {
+            setSuccess(true);
+            setTimeout(() => {
+              setCurrentView('userDashboard');
+            }, 2000);
+          }
+        } catch (err) {
+          console.error('Error creating group:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (success) {
+        return (
+          <div className="bg-white rounded-lg card-shadow p-8 text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Group Created Successfully!</h2>
+            <p className="text-gray-600">Redirecting to your dashboard...</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white rounded-lg card-shadow p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Thrift Group</h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Group Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.groupName}
+                  onChange={(e) => setFormData({...formData, groupName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contribution Amount (NGN) *
+                </label>
+                <input
+                  type="number"
+                  min="1000"
+                  value={formData.contributionAmount}
+                  onChange={(e) => setFormData({...formData, contributionAmount: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contribution Frequency *
+                </label>
+                <select
+                  value={formData.contributionFrequency}
+                  onChange={(e) => setFormData({...formData, contributionFrequency: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="bi_weekly">Bi-weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Required Members *
+                </label>
+                <input
+                  type="number"
+                  min="2"
+                  max="50"
+                  value={formData.requiredMembers}
+                  onChange={(e) => setFormData({...formData, requiredMembers: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Maximum Members *
+                </label>
+                <input
+                  type="number"
+                  min="2"
+                  max="50"
+                  value={formData.maxMembers}
+                  onChange={(e) => setFormData({...formData, maxMembers: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="+2348012345678"
+                  pattern="^\+?[1-9]\d{1,14}$"
+                  title="Please enter a valid phone number with country code"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Include country code (e.g., +234 for Nigeria)</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                rows="3"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Describe your thrift group..."
+              />
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => setCurrentView('userDashboard')}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? '⏳ Creating...' : 'Create Group'}
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    // Join Group Component
+    function JoinGroup({ user, apiCall }) {
+      const [inviteCode, setInviteCode] = useState('');
+      const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber || '');
+      const [loading, setLoading] = useState(false);
+      const [success, setSuccess] = useState(false);
+      const [groupInfo, setGroupInfo] = useState(null);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+          const response = await apiCall(`/invites/join/${inviteCode}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              userId: user.userId,
+              phoneNumber: phoneNumber
+            })
+          });
+
+          if (response.success) {
+            setSuccess(true);
+            setGroupInfo(response.data);
+          }
+        } catch (err) {
+          console.error('Error joining group:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (success) {
+        return (
+          <div className="bg-white rounded-lg card-shadow p-8 text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Successfully Joined Group!</h2>
+            <p className="text-gray-600 mb-4">
+              You are now member #{groupInfo?.payoutPosition} in the group
+            </p>
+            {groupInfo?.autoActivated && (
+              <div className="bg-green-100 text-green-800 p-3 rounded-lg">
+                🚀 Group has been automatically activated!
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Join Thrift Group</h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Invite Code *
+                </label>
+                <input
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg font-mono"
+                  placeholder="Enter invite code"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number *
+                </label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="+234..."
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !inviteCode}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? '⏳ Joining...' : 'Join Group'}
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // Group Dashboard Component
+    function GroupDashboard({ groupId, user, apiCall, setCurrentView }) {
+      const [group, setGroup] = useState(null);
+      const [members, setMembers] = useState([]);
+      const [account, setAccount] = useState(null);
+      const [invites, setInvites] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [showInviteForm, setShowInviteForm] = useState(false);
+
+      useEffect(() => {
+        const fetchGroupData = async () => {
+          try {
+            // Fetch group details
+            const groupData = await apiCall(`/groups/${groupId}`);
+            setGroup(groupData.data);
+
+            // Fetch group members
+            const membersData = await apiCall(`/memberships/group/${groupId}`);
+            setMembers(membersData.data || []);
+
+            // Fetch group account
+            try {
+              const accountData = await apiCall(`/accounts/group/${groupId}`);
+              setAccount(accountData.data);
+            } catch (err) {
+              console.log('No account found for group');
+            }
+
+            // Fetch invites if user is treasurer
+            const userMembership = membersData.data?.find(m => m.userId === user.userId);
+            if (userMembership?.role === 'treasurer') {
+              try {
+                const invitesData = await apiCall(`/invites/group/${groupId}/list`);
+                setInvites(invitesData.data || []);
+              } catch (err) {
+                console.log('Could not fetch invites');
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching group data:', err);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        fetchGroupData();
+      }, [groupId, user.userId]);
+
+      const generateInvite = async (phoneNumber) => {
+        try {
+          const response = await apiCall(`/invites/group/${groupId}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              phoneNumber: phoneNumber,
+              createdBy: user.userId
+            })
+          });
+
+          if (response.success) {
+            setInvites([...invites, response.data]);
+            setShowInviteForm(false);
+          }
+        } catch (err) {
+          console.error('Error generating invite:', err);
+        }
+      };
+
+      if (loading) {
+        return (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading group details...</p>
+          </div>
+        );
+      }
+
+      const userMembership = members.find(m => m.userId === user.userId);
+      const isTreasurer = userMembership?.role === 'treasurer';
+
+      return (
+        <div className="space-y-6">
+          {/* Back Button */}
+          <button
+            onClick={() => setCurrentView('userDashboard')}
+            className="flex items-center text-blue-600 hover:text-blue-800"
+          >
+            ← Back to Dashboard
+          </button>
+
+          {/* Group Header */}
+          <div className="bg-white rounded-lg card-shadow p-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{group?.groupName}</h1>
+                <p className="text-gray-600 mt-2">{group?.description}</p>
+                <div className="flex items-center mt-4 space-x-4">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    group?.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {group?.status?.replace('_', ' ').toUpperCase()}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    Cycle {group?.currentCycle}, Turn {group?.currentTurn}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(group?.contributionAmount || 0)}
+                </p>
+                <p className="text-sm text-gray-600">{group?.contributionFrequency}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-lg card-shadow text-center">
+              <p className="text-2xl font-bold text-blue-600">{group?.currentMembers}</p>
+              <p className="text-sm text-gray-600">Members</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg card-shadow text-center">
+              <p className="text-2xl font-bold text-green-600">
+                {formatCurrency(group?.totalContributions || 0)}
+              </p>
+              <p className="text-sm text-gray-600">Total Contributions</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg card-shadow text-center">
+              <p className="text-2xl font-bold text-purple-600">
+                {formatCurrency(group?.totalPayouts || 0)}
+              </p>
+              <p className="text-sm text-gray-600">Total Payouts</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg card-shadow text-center">
+              <p className="text-2xl font-bold text-orange-600">
+                {formatCurrency(account?.currentBalance || 0)}
+              </p>
+              <p className="text-sm text-gray-600">Current Balance</p>
+            </div>
+          </div>
+
+          {/* Account Details */}
+          {account && (
+            <div className="bg-white rounded-lg card-shadow p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Virtual Account Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Account Number</p>
+                  <p className="font-mono text-lg font-bold">{account.virtualAccountNumber}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Bank Name</p>
+                  <p className="font-medium">{account.bankName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Account Name</p>
+                  <p className="font-medium">{account.accountName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Current Balance</p>
+                  <p className="font-bold text-green-600">{formatCurrency(account.currentBalance)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Members List */}
+          <div className="bg-white rounded-lg card-shadow">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900">Group Members</h3>
+              {isTreasurer && (
+                <button
+                  onClick={() => setShowInviteForm(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  Generate Invite
+                </button>
+              )}
+            </div>
+            <div className="divide-y divide-gray-200">
+              {members.map(member => (
+                <div key={member.membershipId} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <span className="font-bold text-blue-600">#{member.payoutPosition}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {member.userId === user.userId ? 'You' : `Member ${member.payoutPosition}`}
+                          {member.role === 'treasurer' && ' 👑'}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Role: {member.role} • Trust Score: {member.memberTrustScore}/100
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Contributions</p>
+                      <p className="font-bold">{member.totalContributions}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Invite Management (Treasurer Only) */}
+          {isTreasurer && invites.length > 0 && (
+            <div className="bg-white rounded-lg card-shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Invites</h3>
+              </div>
+              <div className="p-4">
+                {invites.slice(0, 3).map(invite => (
+                  <div key={invite.inviteId} className="flex justify-between items-center py-2">
+                    <div>
+                      <p className="font-mono text-sm">{invite.inviteCode}</p>
+                      <p className="text-xs text-gray-600">{invite.invitedPhoneNumber}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      invite.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                      invite.status === 'used' ? 'bg-green-100 text-green-800' : 
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {invite.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Invite Form Modal */}
+          {showInviteForm && (
+            <InviteModal 
+              onClose={() => setShowInviteForm(false)}
+              onSubmit={generateInvite}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // Invite Modal Component
+    function InviteModal({ onClose, onSubmit }) {
+      const [phoneNumber, setPhoneNumber] = useState('');
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        onSubmit(phoneNumber);
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Generate Invite Link</h3>
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="+234..."
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Generate
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // Transactions Component
+    function Transactions({ user, apiCall }) {
+      const [payments, setPayments] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const fetchTransactions = async () => {
+          try {
+            const paymentsData = await apiCall(`/payments/user/${user.userId}`);
+            setPayments(paymentsData.data || []);
+          } catch (err) {
+            console.error('Error fetching transactions:', err);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        fetchTransactions();
+      }, [user.userId]);
+
+      if (loading) {
+        return (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading transactions...</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white rounded-lg card-shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">Transaction History</h2>
+          </div>
+          
+          {payments.length === 0 ? (
+            <div className="text-center py-12">
+              <span className="text-6xl">💰</span>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">No transactions yet</h3>
+              <p className="mt-2 text-gray-600">Your payment history will appear here</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {payments.map(payment => (
+                <div key={payment.transactionId} className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{payment.description}</p>
+                      <p className="text-sm text-gray-600">
+                        {formatDate(payment.createdAt)} • Cycle {payment.cycle}, Turn {payment.turn}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">{formatCurrency(payment.amount)}</p>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        payment.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                        payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {payment.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Render the app
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
